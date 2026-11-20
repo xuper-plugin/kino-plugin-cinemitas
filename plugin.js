@@ -18,7 +18,7 @@ function slug(url) {
 var supportButton = () => ({ type: "ElevatedButton", key: "support", labelText: "Contribuir con una donación", labelTextEn: "Contribute with a donation", onPressed: { go: { url: { href: SUPPORT_URL, title: "Apóyanos en Ko-fi" } } } });
 var supportQr = () => ({ type: "QrImage", key: "supportQr", value: SUPPORT_URL, size: "large", labelText: "Escanea con tu celular para apoyarnos en Ko-fi", labelTextEn: "Scan with your phone to support us on Ko-fi" });
 var support = (device) => device === "tv" ? supportQr() : supportButton();
-var HERO_H = { compact: 220, expanded: 300 };
+var HERO_H = { compact: 240, expanded: 320 };
 var heroSlide = (item) => {
   const s = { type: "heroCard", key: "slide-" + item.id, h: HERO_H, title: String(item.title), titleEn: String(item.title) };
   const img = item.backdrop || item.poster;
@@ -33,7 +33,7 @@ var heroSlider = (items, active) => {
   return { type: "PageView", key: "hero-" + active + "-" + slides.length, autoPlayMs: 6e3, children: slides };
 };
 var rail = (title, items) => ({ type: "titleRail", key: "rail-" + slug(title), title, titleEn: title, items });
-var tabBar = (active) => ({ type: "TabBar", key: "tabs", value: active, onChanged: "tab", tabs: TABS.map((t) => ({ key: t.key, label: t.es, labelEn: t.en })) });
+var tabBar = (active) => ({ type: "TabBar", key: "tabs", value: active, onChanged: "tab", tabs: TABS.map((t) => ({ value: t.key, label: t.es, labelEn: t.en })) });
 var SEARCH_FIELD = "sq";
 var searchSheet = (name) => ({
   type: "BottomSheet",
@@ -282,6 +282,13 @@ async function dl(url, post = null, headers = null) {
 // src/site.js
 var HOST = "https://cinemitas.org/";
 var NAME = "Cinemitas";
+var UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+var BASE_HDRS = {
+  "User-Agent": UA,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3"
+};
+var cdl = (url, post, extra) => dl(url, post, { ...BASE_HDRS, Referer: HOST, ...extra || {} });
 function parseCards(bloque) {
   const out = [];
   for (const m of multi(bloque, "<article(.*?)</article>")) {
@@ -301,14 +308,14 @@ function listingBlock(data) {
   return single(data, '>Añadido recientemente<(.*?)<div class="copy">') || single(data, '</h1>(.*?)<div class="copy">') || data;
 }
 async function search(q) {
-  const data = await dl(HOST + "?s=" + encodeURIComponent(String(q)).replace(/%20/g, "+"));
+  const data = await cdl(HOST + "?s=" + encodeURIComponent(String(q)).replace(/%20/g, "+"));
   return parseCards(listingBlock(data));
 }
 async function listPage(url) {
-  return parseCards(listingBlock(await dl(url)));
+  return parseCards(listingBlock(await cdl(url)));
 }
 async function genreList(base) {
-  const data = await dl(base);
+  const data = await cdl(base);
   const bloque = single(data, ">Géneros<(.*?)</ul>") || single(data, ">Generos<(.*?)</ul>");
   return multi(bloque, '<a href="(.*?)".*?>(.*?)</a>').map(([u, t]) => ({ url: u, title: clean(String(t)).replace(/&amp;/g, "&") })).filter((g) => g.url && g.title);
 }
@@ -343,11 +350,11 @@ async function catalog(kind) {
   return rows;
 }
 async function seasons(url) {
-  const data = await dl(url);
+  const data = await cdl(url);
   return multi(data, "<span class='se-t.*?'>(.*?)</span>").map((t) => ({ season: String(t).trim() }));
 }
 async function episodesOf(url, season) {
-  const data = await dl(url);
+  const data = await cdl(url);
   const bloque = single(data, "<span class='se-t.*?'>" + season + "</span>(.*?)</ul>");
   const out = [];
   for (const [thumb, se, epUrl, title] of multi(bloque, "<li class='mark-.*?<img src='(.*?)'.*?</div><div class='numerando'>(.*?)</div>.*?<a href='(.*?)'>(.*?)</a>")) {
@@ -356,15 +363,27 @@ async function episodesOf(url, season) {
   return out;
 }
 async function findvideos(url) {
-  const data = (await dl(url)).replace(/[\n\r\t]/g, "");
+  const data = (await cdl(url)).replace(/[\n\r\t]/g, "");
   const out = [];
+  const origin = HOST.replace(/\/$/, "");
   for (const option of multi(data, "<li id=.player-option-(.*?)</li>")) {
     const dpost = single(option, `data-post=.([^"'> ]+)`);
     const dtype = single(option, `data-type=.([^"'> ]+)`);
     const dnume = single(option, `data-nume=.([^"'> ]+)`);
     if (!dpost || !dtype || !dnume || dnume === "trailer") continue;
-    const d0 = await dl(HOST + "wp-admin/admin-ajax.php", { action: "doo_player_ajax", post: dpost, nume: dnume, type: dtype });
-    let embed = single(d0, '"embed_url":.*?"(.*?)"');
+    let embed = "";
+    try {
+      const d0 = await cdl(HOST + "wp-admin/admin-ajax.php", { action: "doo_player_ajax", post: dpost, nume: dnume, type: dtype }, { Referer: url, Origin: origin, "X-Requested-With": "XMLHttpRequest" });
+      embed = single(d0, '"embed_url":.*?"(.*?)"');
+    } catch {
+    }
+    if (!embed) {
+      try {
+        const d1 = await cdl(HOST + "wp-json/dooplayer/v2/" + dpost + "/" + dtype + "/" + dnume, null, { Referer: url });
+        embed = single(d1, '"embed_url":.*?"(.*?)"');
+      } catch {
+      }
+    }
     if (!embed) continue;
     embed = embed.replaceAll("\\/", "/");
     if (!/^https?:\/\//i.test(embed)) continue;
