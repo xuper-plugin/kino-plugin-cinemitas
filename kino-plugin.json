@@ -1,7 +1,7 @@
 {
   "id": "cinemitas",
   "name": "Cinemitas",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "apiVersion": 20,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -14,7 +14,7 @@
   "recommends": [
     "xuper-plugin/kino-plugin-kino-resolver"
   ],
-  "browser": true,
+  "browser": "pages",
   "fetchHosts": "any",
   "capabilities": [
     "search",

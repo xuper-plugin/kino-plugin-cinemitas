@@ -390,6 +390,23 @@ async function findvideos(url) {
     const lang = /Latino/i.test(option) ? "Lat" : /Castellano|Españ|ESPA/i.test(option) ? "Esp" : /Sub|VOSE|Vose/i.test(option) ? "Vose" : "?";
     out.push({ url: embed, lang });
   }
+  if (!out.length && typeof kino !== "undefined" && kino.browser && typeof kino.browser.page === "function") {
+    try {
+      const page = await kino.browser.page(url, { waitFor: "source-player-\\d+[^>]*>\\s*<iframe", timeoutMs: 18e3 });
+      const html = String(page && page.html || "");
+      const seen = /* @__PURE__ */ new Set();
+      const add = (raw) => {
+        const u = String(raw).replace(/&amp;/g, "&").trim();
+        if (/^https?:\/\//i.test(u) && !/cinemitas\.org|youtube\.com|youtu\.be|google\.|facebook\.|disqus\./i.test(u) && !seen.has(u)) {
+          seen.add(u);
+          out.push({ url: u, lang: "?" });
+        }
+      };
+      for (const src of multi(html, `id=.source-player-[^>]*?<iframe[^>]+src=["']([^"']+)`)) add(src);
+      if (!out.length) for (const src of multi(html, `<iframe[^>]+src=["']([^"']+)`)) add(src);
+    } catch {
+    }
+  }
   return out;
 }
 
