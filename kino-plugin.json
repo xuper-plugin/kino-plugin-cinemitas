@@ -1,11 +1,11 @@
-﻿{
+{
   "id": "cinemitas",
   "name": "Cinemitas",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "apiVersion": 20,
   "entry": "plugin.js",
   "icon": "icon.png",
-  "description": "PelÃ­culas y series de cinemitas.org. Resuelve los hosters con el plugin Kino Resolver.",
+  "description": "Películas y series de cinemitas.org. Resuelve los hosters con el plugin Kino Resolver.",
   "author": "xuper-plugin",
   "homepage": "https://github.com/xuper-plugin/kino-plugin-cinemitas",
   "hosts": [
