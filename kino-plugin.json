@@ -1,7 +1,7 @@
 {
   "id": "cinemitas",
   "name": "Cinemitas",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -76,6 +76,6 @@
   },
   "signature": {
     "authorKey": "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    "value": "214a9bb24eb5b2566fe275e3677f3175ca38dbd28cb48731c7d2af80903747f11c0f61650938b011608ee233f28c04eab9c96f45bf60c9a66a26b68967f3c902"
+    "value": "b007d9b614acc5429d87bf8a5e3832121e83213ccfde72aa7d0966ca9e33f4765e78a9132474e8673888c97d50bee0fae436bd1afd8432c11b38b08d8676440c"
   }
 }

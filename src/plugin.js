@@ -14,7 +14,7 @@ export const resolve = ch.resolve;
 // Cinemitas plays nothing on its own: every hoster goes through kino-resolver (resolve() refuses while it is missing), so
 // the screen is the install gate until it is installed.
 let std = null;
-const standard = () => (std ??= makeStandardScreen({
+const standard = () => (std ??= makeStandardScreen({ snapshot: "xuper-plugin/kino-plugin-cinemitas",
   kino: globalThis.kino, name: "Cinemitas", logo: LOGO, logoAspect: LOGO_ASPECT, needsResolver: true, hasSettings: false,
   tabs: [
     { id: "movie", label: "Películas", labelEn: "Movies" },
