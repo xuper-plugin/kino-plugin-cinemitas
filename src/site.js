@@ -101,7 +101,7 @@ async function genreList(base) {
 async function popularCatalog() {
   let movies = [];
   try { movies = await listPage(HOST + "genre/peliculas-mas-vistas/"); } catch { /* ignore */ }
-  return movies.length ? [{ title: "Películas populares", items: movies }] : [];
+  return movies.length ? [{ title: "Películas populares", titleEn: "Popular movies", items: movies }] : [];
 }
 
 // Home rows for a tab. kind: "movie" (/movies/) | "tvshow" (/tvshows/) | "popular". Row 0 = recent (hero).
@@ -110,7 +110,7 @@ export async function catalog(kind) {
   const base = kind === "tvshow" ? HOST + "tvshows/" : HOST + "movies/";
   const recientes = await listPage(base);
   const rows = [];
-  if (recientes.length) rows.push({ title: kind === "tvshow" ? "Series recientes" : "Estrenos", items: recientes });
+  if (recientes.length) rows.push({ title: kind === "tvshow" ? "Series recientes" : "Estrenos", titleEn: kind === "tvshow" ? "Recent series" : "New releases", items: recientes });
   let genres = [];
   try { genres = await genreList(base); } catch { /* ignore */ }
   const genreRows = await Promise.all(genres.slice(0, 6).map(async (g) => {
