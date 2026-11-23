@@ -457,11 +457,15 @@ async function findvideos(url) {
   const data = (await cdl(url)).replace(/[\n\r\t]/g, "");
   const out = [];
   const origin = HOST.replace(/\/$/, "");
+  const options = [];
   for (const option of multi(data, "<li id=.player-option-(.*?)</li>")) {
     const dpost = single(option, `data-post=.([^"'> ]+)`);
     const dtype = single(option, `data-type=.([^"'> ]+)`);
     const dnume = single(option, `data-nume=.([^"'> ]+)`);
     if (!dpost || !dtype || !dnume || dnume === "trailer") continue;
+    options.push({ option, dpost, dtype, dnume });
+  }
+  const embeds = await Promise.all(options.map(async ({ dpost, dtype, dnume }) => {
     let embed = "";
     try {
       const d0 = await cdl(HOST + "wp-admin/admin-ajax.php", { action: "doo_player_ajax", post: dpost, nume: dnume, type: dtype }, { Referer: url, Origin: origin, "X-Requested-With": "XMLHttpRequest" });
@@ -475,12 +479,16 @@ async function findvideos(url) {
       } catch {
       }
     }
-    if (!embed) continue;
+    return embed;
+  }));
+  options.forEach(({ option }, i) => {
+    let embed = embeds[i];
+    if (!embed) return;
     embed = embed.replaceAll("\\/", "/");
-    if (!/^https?:\/\//i.test(embed)) continue;
+    if (!/^https?:\/\//i.test(embed)) return;
     const lang = /Latino/i.test(option) ? "Lat" : /Castellano|Españ|ESPA/i.test(option) ? "Esp" : /Sub|VOSE|Vose/i.test(option) ? "Vose" : "?";
     out.push({ url: embed, lang });
-  }
+  });
   if (!out.length && typeof kino !== "undefined" && kino.browser && typeof kino.browser.page === "function") {
     try {
       const page = await kino.browser.page(url, { waitFor: "source-player-\\d+[^>]*>\\s*<iframe", timeoutMs: 18e3 });
