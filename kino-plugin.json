@@ -1,8 +1,8 @@
 {
   "id": "cinemitas",
   "name": "Cinemitas",
-  "version": "0.0.9",
-  "apiVersion": 20,
+  "version": "0.1.0",
+  "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
   "description": "Películas y series de cinemitas.org. Resuelve los hosters con el plugin Kino Resolver.",
