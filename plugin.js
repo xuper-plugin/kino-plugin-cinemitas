@@ -355,7 +355,50 @@ function parseCards(bloque) {
 function listingBlock(data) {
   return single(data, '>Añadido recientemente<(.*?)<div class="copy">') || single(data, '</h1>(.*?)<div class="copy">') || data;
 }
+var NONCE_KEY = "searchNonce1";
+var NONCE_MS = 6 * 3600 * 1e3;
+async function searchNonce(fresh = false) {
+  if (!fresh) {
+    try {
+      const o = JSON.parse(kino.storage.get(NONCE_KEY) || "null");
+      if (o && o.n && Date.now() - o.at < NONCE_MS) return o.n;
+    } catch {
+    }
+  }
+  const home = await cdl(HOST);
+  const b64 = single(home, 'id="live_search-js-extra" src="data:text/javascript;base64,([A-Za-z0-9+/=]+)"');
+  const cfg = b64 ? atob(b64) : home;
+  const n = single(cfg, '"nonce":"([a-z0-9]+)"');
+  if (n) try {
+    kino.storage.set(NONCE_KEY, JSON.stringify({ n, at: Date.now() }));
+  } catch {
+  }
+  return n || null;
+}
+async function liveSearch(q, nonce) {
+  const raw = await cdl(HOST + "wp-json/dooplay/search/?keyword=" + encodeURIComponent(String(q)) + "&nonce=" + nonce);
+  let data = null;
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  if (!data || typeof data !== "object" || data.error) return null;
+  return Object.values(data).filter((x) => x && x.url && x.title).slice(0, 24).map((x) => ({
+    url: String(x.url),
+    title: clean(String(x.title)),
+    thumb: String(x.img || "").replace(/\/w92\//, "/w342/"),
+    year: x.extra && x.extra.date || "",
+    type: /\/tvshows\//.test(String(x.url)) ? "tvshow" : "movie"
+  }));
+}
 async function search(q) {
+  try {
+    let found = await liveSearch(q, await searchNonce());
+    if (found === null) found = await liveSearch(q, await searchNonce(true));
+    if (found) return found;
+  } catch {
+  }
   const data = await cdl(HOST + "?s=" + encodeURIComponent(String(q)).replace(/%20/g, "+"));
   return parseCards(listingBlock(data));
 }
