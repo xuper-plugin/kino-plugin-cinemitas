@@ -1,7 +1,7 @@
 {
   "id": "cinemitas",
   "name": "Cinemitas",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "apiVersion": 30,
   "entry": "plugin.js",
   "icon": "icon.png",
@@ -19,6 +19,7 @@
   "fetchHosts": "any",
   "capabilities": [
     "search",
+    "home",
     "resolve",
     "episodes",
     "screen"
@@ -77,6 +78,6 @@
   },
   "signature": {
     "authorKey": "6693946bd5c56196960959c4b9665fad5094374bcb85ddb282f8bf762c835263",
-    "value": "5f9ba4dc94525c9cd101857847bbd964b32bc55605b30df1b9d5f98a615878bbadf7abacf64237fc24889f6337de9c2592944fd31da3a9b80e5226b296302508"
+    "value": "a9195a7d59868c7996ece170c2ae593b30c9177d8e579e843bbc2ab786a5919f9fb2e143811bcbf65543ea9fc55735e955c729fc09b205a6adb7138ab63dc20d"
   }
 }

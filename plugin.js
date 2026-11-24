@@ -29,6 +29,11 @@ async function rankServers(kino2, list, urlOf, groupOf = () => 0) {
 // src/kit/content.js
 var LANG = { Lat: "Latino", LAT: "Latino", Esp: "Español", ESP: "Español", Vose: "VOSE", VOSE: "VOSE" };
 var TTL = 3e5;
+var HOME_KEY = "home:last";
+var HOME_KEEP_MS = 12 * 3600 * 1e3;
+var HOME_BUDGET_MS = 11e3;
+var HOME_ROW_MAX = 20;
+var homeMem = null;
 var GENRE_EN = {
   accion: "Action",
   aventura: "Adventure",
@@ -229,6 +234,57 @@ function channel(site) {
       }
       throw kino.error("not_found", "no playable streams", { userMessage: say("No se pudo resolver el video", "The video could not be opened") });
     },
+    /**
+     * Kino's Home by categories (the `home` export): one row per kind of title the site can fill, each tagged with its type
+     * (`genre`) so Kino shelves it under Películas, Series, Infantil... The rows come from site.HOME_ROWS ([{ id, title, titleEn,
+     * genre, urls }], every url a listing page) through site.listPage; a row whose pages fail is left out, the rows that answered
+     * within the budget are shown, and the last Home that worked is kept for 12 h (also the answer when none arrives in time).
+     */
+    async home() {
+      const defs = site.HOME_ROWS || [];
+      if (!defs.length || !site.listPage) return [];
+      const now = Date.now();
+      if (homeMem && now - homeMem.at < TTL * 6) return homeMem.rows;
+      const out = defs.map(() => null);
+      let done = false;
+      const all = Promise.all(defs.map((d, i) => Promise.resolve().then(async () => {
+        const pages = await Promise.all(d.urls.map((u) => site.listPage(u).catch(() => [])));
+        const seen = /* @__PURE__ */ new Set();
+        const items = [];
+        for (let k = 0; items.length < HOME_ROW_MAX; k++) {
+          let any = false;
+          for (const p of pages) if (k < p.length) {
+            any = true;
+            if (!seen.has(p[k].url)) {
+              seen.add(p[k].url);
+              items.push(mapItem(p[k]));
+            }
+          }
+          if (!any) break;
+        }
+        if (items.length) out[i] = { id: d.id, title: d.title, ...d.titleEn ? { titleEn: d.titleEn } : {}, genre: d.genre, items: items.slice(0, HOME_ROW_MAX) };
+      }).catch(() => {
+      }))).then(() => {
+        done = true;
+      });
+      const end = Date.now() + HOME_BUDGET_MS;
+      while (!done && Date.now() < end) await Promise.race([all, kino.sleep(Math.min(250, Math.max(1, end - Date.now())))]);
+      const rows = out.filter(Boolean);
+      if (rows.length) {
+        homeMem = { at: Date.now(), rows };
+        try {
+          kino.storage.set(HOME_KEY, JSON.stringify({ at: Date.now(), rows }), { ttlMs: HOME_KEEP_MS });
+        } catch (_) {
+        }
+        return rows;
+      }
+      try {
+        const o = JSON.parse(kino.storage.get(HOME_KEY) || "null");
+        if (o && Array.isArray(o.rows) && Date.now() - o.at < HOME_KEEP_MS) return o.rows;
+      } catch (_) {
+      }
+      return [];
+    },
     /** The site's catalog for one kind ("movie", "tvshow", "popular") as the standard screen's rows (5 min cache). */
     async catalogRows(kind) {
       return (await loadCatalog(kind)).map((r) => ({ id: slug(r.title), title: r.title, ...r.titleEn ? { titleEn: r.titleEn } : {}, items: r.items }));
@@ -239,11 +295,13 @@ function channel(site) {
 // src/site.js
 var site_exports = {};
 __export(site_exports, {
+  HOME_ROWS: () => HOME_ROWS,
   HOST: () => HOST,
   NAME: () => NAME,
   catalog: () => catalog,
   episodesOf: () => episodesOf,
   findvideos: () => findvideos,
+  listPage: () => listPage,
   search: () => search,
   seasons: () => seasons
 });
@@ -331,9 +389,9 @@ async function searchNonce(fresh = false) {
     } catch {
     }
   }
-  const home = await cdl(HOST);
-  const b64 = single(home, 'id="live_search-js-extra" src="data:text/javascript;base64,([A-Za-z0-9+/=]+)"');
-  const cfg = b64 ? atob(b64) : home;
+  const home2 = await cdl(HOST);
+  const b64 = single(home2, 'id="live_search-js-extra" src="data:text/javascript;base64,([A-Za-z0-9+/=]+)"');
+  const cfg = b64 ? atob(b64) : home2;
   const n = single(cfg, '"nonce":"([a-z0-9]+)"');
   if (n) try {
     kino.storage.set(NONCE_KEY, JSON.stringify({ n, at: Date.now() }));
@@ -371,6 +429,13 @@ async function search(q) {
 async function listPage(url) {
   return parseCards(listingBlock(await cdl(url)));
 }
+var HOME_ROWS = [
+  { id: "estrenos", title: "Estrenos", titleEn: "New releases", genre: "peliculas", urls: [HOST + "movies/"] },
+  { id: "peliculas-populares", title: "Películas populares", titleEn: "Popular movies", genre: "peliculas", urls: [HOST + "genre/peliculas-mas-vistas/"] },
+  { id: "series-recientes", title: "Series recientes", titleEn: "Recent series", genre: "series", urls: [HOST + "tvshows/"] },
+  { id: "infantil", title: "Infantil", titleEn: "Kids", genre: "infantil", urls: [HOST + "genre/familia/", HOST + "genre/kids/"] },
+  { id: "documentales", title: "Documentales", titleEn: "Documentaries", genre: "documentales", urls: [HOST + "genre/documental/"] }
+];
 async function genreList(base) {
   const data = await cdl(base);
   const bloque = single(data, ">Géneros<(.*?)</ul>") || single(data, ">Generos<(.*?)</ul>");
@@ -1311,6 +1376,7 @@ var ch = channel(site_exports);
 var search2 = ch.search;
 var episodes = ch.episodes;
 var resolve = ch.resolve;
+var home = ch.home;
 var std = null;
 var standard = () => std ?? (std = makeStandardScreen({
   snapshot: "xuper-plugin/kino-plugin-cinemitas",
@@ -1338,6 +1404,7 @@ async function screenEvent(ev) {
 var proto_catalog_search = catalogDoor(search2);
 export {
   episodes,
+  home,
   proto_catalog_search,
   resolve,
   screen,

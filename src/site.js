@@ -87,9 +87,19 @@ export async function search(q) {
   return parseCards(listingBlock(data));
 }
 
-async function listPage(url) {
+export async function listPage(url) {
   return parseCards(listingBlock(await cdl(url)));
 }
+
+// Kino's Home by categories: one typed row per kind of title the site has (its genre pages "familia" and "kids" are the kids'
+// shelf, "documental" the documentaries; the site has no anime section, so no Anime row). `genre` is Kino's own type tag.
+export const HOME_ROWS = [
+  { id: "estrenos", title: "Estrenos", titleEn: "New releases", genre: "peliculas", urls: [HOST + "movies/"] },
+  { id: "peliculas-populares", title: "Películas populares", titleEn: "Popular movies", genre: "peliculas", urls: [HOST + "genre/peliculas-mas-vistas/"] },
+  { id: "series-recientes", title: "Series recientes", titleEn: "Recent series", genre: "series", urls: [HOST + "tvshows/"] },
+  { id: "infantil", title: "Infantil", titleEn: "Kids", genre: "infantil", urls: [HOST + "genre/familia/", HOST + "genre/kids/"] },
+  { id: "documentales", title: "Documentales", titleEn: "Documentaries", genre: "documentales", urls: [HOST + "genre/documental/"] },
+];
 
 async function genreList(base) {
   const data = await cdl(base);
