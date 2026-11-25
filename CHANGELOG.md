@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.11
+
+- The catalog door also lists a series' episodes, for the author's other plugins (std 1.10.0)
+
 ## 0.1.10
 
 - Home by categories: the plugin now answers Kino's home() with typed rows (Estrenos and popular titles as Películas, Infantil, Documentales, Series recientes as Series)
