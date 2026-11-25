@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.12
+
+- Home rows open their full list with Ver más, and so do the screen's rows (recent, genres, popular): each pages through the site's own listing
+
 ## 0.1.11
 
 - The catalog door also lists a series' episodes, for the author's other plugins (std 1.10.1)

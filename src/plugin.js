@@ -11,6 +11,7 @@ export const search = ch.search;
 export const episodes = ch.episodes;
 export const resolve = ch.resolve;
 export const home = ch.home;
+export const browse = ch.browse;
 
 // Cinemitas plays nothing on its own: every hoster goes through kino-resolver (resolve() refuses while it is missing), so
 // the screen is the install gate until it is installed.
